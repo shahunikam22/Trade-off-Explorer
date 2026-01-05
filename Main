@@ -1,0 +1,110 @@
+"""
+Option Comparison & Trade-off Tool (CLI)
+Purpose: Help users compare options and understand trade-offs instead of getting one answer.
+Run: python compare_tool.py
+"""
+
+from dataclasses import dataclass, field
+from typing import Dict, List
+
+@dataclass
+class Option:
+    name: str
+    scores: Dict[str, int]  # 1 (low) to 5 (high)
+    notes: Dict[str, str] = field(default_factory=dict)
+
+@dataclass
+class DecisionContext:
+    title: str
+    dimensions: List[str]
+    weights: Dict[str, int]
+    options: List[Option]
+
+
+def weighted_score(option: Option, weights: Dict[str, int]) -> int:
+    return sum(option.scores[d] * weights.get(d, 1) for d in option.scores)
+
+
+def explain_tradeoffs(context: DecisionContext):
+    print("\n=== TRADE-OFF ANALYSIS ===")
+    for d in context.dimensions:
+        print(f"\nDimension: {d}")
+        for o in context.options:
+            score = o.scores.get(d, 0)
+            note = o.notes.get(d, "")
+            print(f"- {o.name}: {score}/5 {f'→ {note}' if note else ''}")
+
+
+def recommend(context: DecisionContext):
+    ranked = sorted(
+        context.options,
+        key=lambda o: weighted_score(o, context.weights),
+        reverse=True,
+    )
+
+    print("\n=== CONDITIONAL GUIDANCE ===")
+    for i, o in enumerate(ranked, 1):
+        print(f"{i}. {o.name} (score: {weighted_score(o, context.weights)})")
+
+    print("\nChoose based on priorities:")
+    top = ranked[0]
+    for d in context.dimensions:
+        if top.scores[d] >= 4:
+            print(f"- {top.name} is strong in {d}")
+
+
+if __name__ == "__main__":
+    # Example: Choosing a Database
+    context = DecisionContext(
+        title="Choose a Database",
+        dimensions=["Cost", "Ease of Use", "Scalability", "Data Integrity"],
+        weights={
+            "Cost": 3,
+            "Ease of Use": 4,
+            "Scalability": 2,
+            "Data Integrity": 5,
+        },
+        options=[
+            Option(
+                name="MySQL",
+                scores={
+                    "Cost": 4,
+                    "Ease of Use": 5,
+                    "Scalability": 3,
+                    "Data Integrity": 4,
+                },
+                notes={
+                    "Ease of Use": "Fast to get started",
+                    "Scalability": "May need tuning at scale",
+                },
+            ),
+            Option(
+                name="PostgreSQL",
+                scores={
+                    "Cost": 4,
+                    "Ease of Use": 3,
+                    "Scalability": 5,
+                    "Data Integrity": 5,
+                },
+                notes={
+                    "Data Integrity": "Strong consistency guarantees",
+                },
+            ),
+            Option(
+                name="MongoDB",
+                scores={
+                    "Cost": 3,
+                    "Ease of Use": 4,
+                    "Scalability": 5,
+                    "Data Integrity": 2,
+                },
+                notes={
+                    "Data Integrity": "Schema flexibility can cause issues later",
+                },
+            ),
+        ],
+    )
+
+    print(f"=== {context.title} ===")
+    explain_tradeoffs(context)
+    recommend(context)
